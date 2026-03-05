@@ -18,7 +18,19 @@ st.set_page_config(
 
 # --- 2. CONFIGURAÇÕES FIREBASE ---
 # Substitua as strings abaixo pelas credenciais que você obteve no console do Firebase
+firebase_config = {
+    "apiKey": st.secrets["firebase"]["apiKey"],
+    "authDomain": st.secrets["firebase"]["authDomain"],
+    "projectId": st.secrets["firebase"]["projectId"],
+    "storageBucket": st.secrets["firebase"]["storageBucket"],
+    "messagingSenderId": st.secrets["firebase"]["messagingSenderId"],
+    "appId": st.secrets["firebase"]["appId"],
+    "databaseURL": st.secrets["firebase"]["databaseURL"]
+}
 
+# Segundo: Agora que a variável 'firebase_config' existe, inicializamos
+firebase = pyrebase.initialize_app(firebase_config)
+auth = firebase.auth()
 
 firebase = pyrebase.initialize_app(firebase_config)
 auth = firebase.auth()
