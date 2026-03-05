@@ -18,15 +18,7 @@ st.set_page_config(
 
 # --- 2. CONFIGURAÇÕES FIREBASE ---
 # Substitua as strings abaixo pelas credenciais que você obteve no console do Firebase
-firebase_config = {
-    "apiKey": "AIzaSyAzPrVA7aqxjEd6fc2VnVEcmXE_D98CVNw",
-    "authDomain": "guardiao-dio.firebaseapp.com",
-    "projectId": "guardiao-dio",
-    "storageBucket": "guardiao-dio.firebasestorage.app",
-    "messagingSenderId": "338945306772",
-    "appId": "1:338945306772:web:93a49fd2cabb7dfb8f4481",
-    "databaseURL": "" 
-}
+
 
 firebase = pyrebase.initialize_app(firebase_config)
 auth = firebase.auth()
