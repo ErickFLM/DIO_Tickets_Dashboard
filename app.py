@@ -45,7 +45,8 @@ def inicializar_banco():
     
     try:
         url = st.secrets["connections"]["gsheets"]["url_tickets"]
-        df = conn.read(spreadsheet=url, ttl="0")
+        # No inicializar_banco
+df = conn.read(spreadsheet=url, ttl=0) # Sem aspas no 0
         df['ID'] = df['ID'].astype(str).str.strip()
         df['Data_Abertura'] = pd.to_datetime(df['Data_Abertura'], dayfirst=True, errors='coerce')
         df['Data_Finalizacao'] = pd.to_datetime(df['Data_Finalizacao'], dayfirst=True, errors='coerce')
