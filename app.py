@@ -9,15 +9,14 @@ import pyrebase
 from streamlit_gsheets import GSheetsConnection
 
 
-# --- 1. CONFIGURAÇÃO DA PÁGINA (Deve ser o primeiro comando Streamlit) ---
+
 st.set_page_config(
     page_title="Guardião DIO | Rastreabilidade & BI",
     page_icon="🛡️",
     layout="wide"
 )
 
-# --- 2. CONFIGURAÇÕES FIREBASE ---
-# Substitua as strings abaixo pelas credenciais que você obteve no console do Firebase
+
 firebase_config = {
     "apiKey": st.secrets["firebase"]["apiKey"],
     "authDomain": st.secrets["firebase"]["authDomain"],
@@ -28,7 +27,7 @@ firebase_config = {
     "databaseURL": st.secrets["firebase"]["databaseURL"]
 }
 
-# Segundo: Agora que a variável 'firebase_config' existe, inicializamos
+
 firebase = pyrebase.initialize_app(firebase_config)
 auth = firebase.auth()
 
@@ -39,7 +38,6 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 
 
-# --- 2. CAMADA DE DADOS ---
 def inicializar_banco():
     colunas = [
         "ID", "Clínica", "Plano", "Plataforma", "Tipo", "Status", "Data_Abertura", 
@@ -84,28 +82,22 @@ def carregar_dados_churn():
         return pd.DataFrame()
 
 def salvar_banco(df_entrada):
-    # 1. Busca a URL da planilha nos segredos
     url = st.secrets["connections"]["gsheets"]["url_tickets"]
     
     df_save = df_entrada.copy()
     
-    # 2. Formata as datas para texto (evita erro de serialização no Google)
     df_save['Data_Abertura'] = df_save['Data_Abertura'].dt.strftime('%d/%m/%Y %H:%M')
     df_save['Data_Finalizacao'] = pd.to_datetime(df_save['Data_Finalizacao']).dt.strftime('%d/%m/%Y %H:%M').fillna("")
     
     try:
-        # 3. O PULO DO GATO: Envia o DataFrame inteiro para o Google Sheets
-        # O parâmetro 'spreadsheet' recebe a URL, e 'data' recebe o seu DataFrame
         conn.update(spreadsheet=url, data=df_save)
         
-        # 4. Limpa o cache para garantir que a próxima leitura pegue o dado novo
         st.cache_data.clear()
         return True
     except Exception as e:
         st.error(f"Erro ao salvar no Google Sheets: {e}")
         return False
 
-# --- 3. INTELIGÊNCIA DE SLA (D1, D2, D3) ---
 def engine_sla(row):
     if row['Status'] == "Finalizado": return "✅ Concluído"
     if pd.isnull(row['Data_Abertura']): return "⚪ Pendente"
@@ -118,7 +110,6 @@ def engine_sla(row):
     if atraso >= 1 and row['D1_Feito'] == "Não": return "⚠️ ALERTA 1 (D1 - 24h+)"
     return "🟢 No Prazo"
 
-# --- 4. EXPORTAÇÃO EXCEL ---
 def preparar_excel(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -133,7 +124,6 @@ def preparar_excel(df):
     return output.getvalue()
 
 
-    # --- 5. LÓGICA DE AUTENTICAÇÃO ---
 def tela_login():
     st.markdown("<br><br>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1, 2, 1])
@@ -156,7 +146,6 @@ def tela_login():
                 try:
                     user = auth.sign_in_with_email_and_password(email, password)
 
-                    # 🔥 atualiza sessão antes de rerun
                     st.session_state.authenticated = True
                     st.session_state.user = user
                     st.success("Login realizado com sucesso!")
@@ -166,13 +155,11 @@ def tela_login():
 
                 except Exception as e:
                     st.error("E-mail ou senha incorretos.")
-# ---------------- CONTROLE DE SESSÃO ---------------- #
 
 if 'authenticated' not in st.session_state:
     tela_login()
     st.stop()
 
-# ---------------- APP PRINCIPAL ---------------- #
 
 df_raw = inicializar_banco()
 
@@ -261,12 +248,10 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # 🔒 BOTÃO DE LOGOUT (AGORA DENTRO DA SIDEBAR)
     if st.button("🚪 Sair do Sistema", use_container_width=True):
         st.session_state.clear()
         st.rerun()
 
-# ABAS
 tab_ops, tab_bi, tab_hist, tab_churn  = st.tabs(["🚀 Operação Suporte", "📊 BI & Causa Raiz", "📁 Exportação Excel", "📉 Gestão de Churn"])
 
 with tab_ops:
@@ -306,7 +291,6 @@ with tab_ops:
                     c_d2 = st.checkbox("D2 Ok", value=(ticket['D2_Feito'] == "Sim"))
                     c_d3 = st.checkbox("D3 Ok", value=(ticket['D3_Feito'] == "Sim"))
                     
-                    # --- AQUI ESTÁ O CHECKBOX QUE FALTAVA A LÓGICA ---
                     add_cob = st.checkbox("Somar Cobrança Tech (+1)")
 
                 with col_e2:
@@ -322,7 +306,6 @@ with tab_ops:
                     df_raw.at[idx, 'D2_Feito'] = "Sim" if c_d2 else "Não"
                     df_raw.at[idx, 'D3_Feito'] = "Sim" if c_d3 else "Não"
                     
-                    # --- LÓGICA DE INCREMENTO DAS COBRANÇAS TECH ---
                     if add_cob:
                         df_raw.at[idx, 'Cobranças_Tech'] += 1
                     
@@ -360,7 +343,6 @@ with tab_churn:
     st.header("📉 Análise Estratégica de Churn (Retenção)")
     df_churn = carregar_dados_churn()
     
-    # --- 1. LIMPEZA E PADRONIZAÇÃO (EXATAMENTE COMO O SEU ORIGINAL) ---
     df_churn = df_churn.fillna("Não informado")
     df_churn['Submotivo'] = df_churn['Submotivo'].replace("Nan", "Outros")
     df_churn['Motivo de Churn'] = df_churn['Motivo de Churn'].replace("Nan", "Não categorizado")
@@ -368,14 +350,12 @@ with tab_churn:
     if df_churn.empty:
         st.warning("⚠️ Base de Churn não encontrada.")
     else:
-        # Garantindo que 'Análises' seja texto para o filtro não quebrar
         df_churn['Análises'] = df_churn['Análises'].astype(str).str.strip()
         
         df_churn['Motivo de Churn'] = df_churn['Motivo de Churn'].astype(str).str.strip().str.capitalize()
         df_churn['Submotivo'] = df_churn['Submotivo'].astype(str).str.strip().str.capitalize()
         df_churn['Mês'] = df_churn['Mês'].astype(str).str.strip().str.capitalize()
 
-        # --- 2. FILTROS (MANTENDO OS SEUS + ADICIONANDO ANÁLISES) ---
         with st.container(border=True):
             f1, f2, f3, f4 = st.columns([1, 1, 1, 1])
             anos = sorted(df_churn['Ano'].unique())
@@ -384,13 +364,11 @@ with tab_churn:
             css = sorted(df_churn['CS'].unique())
             sel_cs = f2.multiselect("Responsável (CS):", css, default=css)
 
-            # ADICIONADO: Filtro de Análises
             analises_list = sorted(df_churn['Análises'].unique())
             sel_analises = f3.multiselect("Nº Análises (Plano):", analises_list, default=analises_list)
             
             busca_cliente = f4.text_input("🔍 Localizar Clínica:")
             
-            # Filtro mestre respeitando todos os campos
             df_c_filtered = df_churn[
                 (df_churn['Ano'].isin(sel_ano)) & 
                 (df_churn['CS'].isin(sel_cs)) &
@@ -401,7 +379,6 @@ with tab_churn:
 
         st.write("") 
 
-        # --- 3. KPIs (ORIGINAIS) ---
         mrr_total = df_c_filtered['Valor de MRR Perdido'].sum()
         arr_total = df_c_filtered['Valor de ARR Perdido'].sum()
         qtd_churn = len(df_c_filtered)
@@ -419,7 +396,6 @@ with tab_churn:
 
         st.write("") 
 
-        # --- 4. SEÇÃO: MOTIVOS (INTERATIVO - ORIGINAL) ---
         with st.container(border=True):
             col_t1, col_t2 = st.columns([2, 1])
             col_t1.subheader("🚩 1. Principais Motivos de Saída")
@@ -444,7 +420,6 @@ with tab_churn:
 
         st.write("") 
 
-        # --- 5. SEÇÃO: SUBMOTIVOS (INTERATIVO - ORIGINAL) ---
         with st.container(border=True):
             col_st1, col_st2 = st.columns([2, 1])
             col_st1.subheader("🔍 2. Detalhes Específicos (Submotivos)")
@@ -469,16 +444,13 @@ with tab_churn:
 
         st.write("")
 
-     # --- 6. NOVA SEÇÃO: INVESTIGAÇÃO POR CS (ORGANIZADA POR QUANTIDADE) ---
         with st.container(border=True):
             st.subheader("🕵️ 3. Investigação por Analista CS")
             st.write("Análise de volume de saídas por plano e impacto financeiro.")
             
-            # Lista com opção global
             lista_cs_detalhe = ["Todas as CSs"] + sorted(df_c_filtered['CS'].unique().tolist())
             sel_cs_drill = st.selectbox("Selecione o CS para abrir a carteira:", lista_cs_detalhe)
             
-            # Lógica de filtro
             if sel_cs_drill == "Todas as CSs":
                 df_drill = df_c_filtered
                 titulo_visao = "Carteira Global (Todas as CSs)"
@@ -486,8 +458,6 @@ with tab_churn:
                 df_drill = df_c_filtered[df_c_filtered['CS'] == sel_cs_drill]
                 titulo_visao = f"Analista: {sel_cs_drill}"
             
-            # --- O PULO DO GATO: Agrupar para a Pizza ---
-            # Agrupamos por plano para ter a contagem (fatias) e a soma (hover)
             df_drill_pie = df_drill.groupby('Análises').agg(
                 Qtd=('Análises', 'count'),
                 MRR_Total=('Valor de MRR Perdido', 'sum')
@@ -498,32 +468,27 @@ with tab_churn:
                 st.markdown(f"#### 📊 {titulo_visao}")
                 st.write(f"**Total de Clínicas Perdidas:** {len(df_drill)}")
                 
-                # Tabela de apoio (Quantidade)
                 df_count_drill = df_drill_pie[['Análises', 'Qtd']].sort_values('Qtd', ascending=False)
                 df_count_drill.columns = ['Plano (Análises)', 'Qtd Clínicas']
                 st.table(df_count_drill)
             
             with d2:
-                # Gráfico de Pizza organizado por QUANTIDADE
                 fig_pie_drill = px.pie(
                     df_drill_pie, 
                     names='Análises', 
-                    values='Qtd',  # Agora a fatia é definida pelo número de clínicas
+                    values='Qtd',  
                     title=f"Volume de Saídas por Plano - {titulo_visao}",
                     hole=0.4, 
                     color_discrete_sequence=px.colors.qualitative.Pastel,
-                    # Adicionamos o MRR no hover para aparecer ao passar o mouse
                     hover_data={'MRR_Total': ':,.2f', 'Qtd': True}
                 )
                 
-                # Customização do texto que aparece no hover
                 fig_pie_drill.update_traces(
                     hovertemplate="<b>Plano: %{label}</b><br>Qtd: %{value}<br>Perda Financeira: R$ %{customdata[0]:,.2f}"
                 )
                 
                 st.plotly_chart(fig_pie_drill, use_container_width=True)
 
-        # --- 7. LINHA DO TEMPO (ORIGINAL) ---
         with st.container(border=True):
             st.subheader("📅 4. Evolução do Churn no Tempo")
             meses_ordem = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", 
