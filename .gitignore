@@ -1,3 +1,24 @@
-base_suporte.csv
+# --- Segurança (CRÍTICO) ---
+.streamlit/secrets.toml
+*.json
+.env
+
+# --- Python ---
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# --- Dados Locais (O antigo banco CSV) ---
+*.csv
+*.xlsx
+
+# --- Sistema ---
+.DS_Store
+Thumbs.db
