@@ -80,18 +80,26 @@ def carregar_dados_churn():
         return pd.DataFrame()
 
 def salvar_banco(df_entrada):
+    # 1. Busca a URL da planilha nos segredos
     url = st.secrets["connections"]["gsheets"]["url_tickets"]
+    
     df_save = df_entrada.copy()
+    
+    # 2. Formata as datas para texto (evita erro de serialização no Google)
     df_save['Data_Abertura'] = df_save['Data_Abertura'].dt.strftime('%d/%m/%Y %H:%M')
-    # Tratamento para salvar data de finalização se existir
     df_save['Data_Finalizacao'] = pd.to_datetime(df_save['Data_Finalizacao']).dt.strftime('%d/%m/%Y %H:%M').fillna("")
     
-    for _ in range(10):
-        try:
-            df_save.to_csv(DB_FILE, index=False)
-            return True
-        except: time.sleep(0.1)
-    return False
+    try:
+        # 3. O PULO DO GATO: Envia o DataFrame inteiro para o Google Sheets
+        # O parâmetro 'spreadsheet' recebe a URL, e 'data' recebe o seu DataFrame
+        conn.update(spreadsheet=url, data=df_save)
+        
+        # 4. Limpa o cache para garantir que a próxima leitura pegue o dado novo
+        st.cache_data.clear()
+        return True
+    except Exception as e:
+        st.error(f"Erro ao salvar no Google Sheets: {e}")
+        return False
 
 # --- 3. INTELIGÊNCIA DE SLA (D1, D2, D3) ---
 def engine_sla(row):
