@@ -1,4 +1,6 @@
 streamlit
 pandas
+st-gsheets-connection
+pyrebase4
 plotly
-fpdf
+xlsxwriter
